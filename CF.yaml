@@ -27,14 +27,15 @@ Resources:
       WebsiteConfiguration:
         IndexDocument: index.html
         ErrorDocument: index.html
-    DeletionPolicy: Retain
+    DeletionPolicy: Delete
 
   LambdaDeployementS3Bucket:
     Type: AWS::S3::Bucket
     Properties:
       BucketName: assign3lambda
       AccessControl: PublicRead
-    DeletionPolicy: Retain
+    DeletionPolicy: Delete
+
   BucketPolicy:
     Type: AWS::S3::BucketPolicy
     Properties:
@@ -188,7 +189,9 @@ Resources:
       Environment:
         Variables:
           REGION: us-east-1
-      CodeUri: s3://assign3lambda/function/Assign3-LF1.zip  
+      CodeUri: 
+        Bucket: !Ref LambdaDeployementS3Bucket
+        Key: function/Assign3-LF1.zip  
       Description: Lambda function for FrontEnd 
       MemorySize: 128   
 
@@ -207,7 +210,9 @@ Resources:
       Environment:
         Variables:
           REGION: us-east-1
-      CodeUri: s3://assign3lambda/function/Assign3-LF2.zip 
+      CodeUri: 
+        Bucket: !Ref LambdaDeployementS3Bucket
+        Key: function/Assign3-LF2.zip 
       Description: Lambda function for CD Demo  
       MemorySize: 128   
 
