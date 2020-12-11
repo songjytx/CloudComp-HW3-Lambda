@@ -2,7 +2,7 @@ AWSTemplateFormatVersion: '2010-09-09'
 Transform: 'AWS::Serverless-2016-10-31'
 Description: An AWS Serverless Specification template describing your function.
 Resources:
-  Assign3LF1:
+  LFTEST:
     Type: 'AWS::Serverless::Function'
     Properties:
       Handler: lambda_function.lambda_handler
@@ -11,26 +11,4 @@ Resources:
       Description: ''
       MemorySize: 128
       Timeout: 3
-      Role: 'arn:aws:iam::186209955484:role/service-role/Assign3-LF1-role-kbq87fa8'
-      VpcConfig:
-        SecurityGroupIds:
-          - sg-067bebc9f1781d31c
-        SubnetIds:
-          - subnet-805a87e6
-          - subnet-4d39d97c
-  Assign3LF2:
-    Type: 'AWS::Serverless::Function'
-    Properties:
-      Handler: lambda_function.lambda_handler
-      Runtime: python3.8
-      CodeUri: .
-      Description: ''
-      MemorySize: 128
-      Timeout: 3
-      Role: 'arn:aws:iam::186209955484:role/service-role/Assign3-LF2-role-6c6jgmou'
-      Events:
-        Api1:
-          Type: Api
-          Properties:
-            Path: /search
-            Method: POST
+      Role: 'arn:aws:iam::186209955484:role/service-role/LFTEST-role-onewv07z'
