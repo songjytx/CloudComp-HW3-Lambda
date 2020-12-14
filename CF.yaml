@@ -329,7 +329,6 @@ Resources:
       FunctionName: assign3GenLF2
 
 
-
 Outputs:
   WebsiteURL:
     Value: !Join
