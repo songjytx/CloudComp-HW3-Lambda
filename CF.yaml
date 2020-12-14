@@ -161,6 +161,76 @@ Resources:
                 - /*
       Bucket: !Ref FrontS3Bucket
 
+  CodeBuildServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /
+      AssumeRolePolicyDocument: |
+        {
+            "Statement": [{
+                "Effect": "Allow",
+                "Principal": { "Service": [ "codebuild.amazonaws.com" ]},
+                "Action": [ "sts:AssumeRole" ]
+            }]
+        }
+      Policies:
+        - PolicyName: client-code-build-policy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Resource: "*"
+                Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+              - Resource:
+                  - !Sub arn:aws:s3:::${LambdaDeployementS3Bucket}/*
+                  - !Sub arn:aws:s3:::${LambdaDeployementS3Bucket}
+                Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:PutObjectAcl
+                  - s3:GetObject
+                  - s3:GetObjectVersion
+                  - s3:GetBucketVersioning
+              - Resource: "*"
+                Effect: Allow
+                Action:
+                  - s3:ListAllMyBuckets
+                  - s3:ListObjects
+
+  DeployClientBuildProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Artifacts:
+        Type: "CODEPIPELINE"
+      Source:
+        Type: "CODEPIPELINE"
+        BuildSpec: |
+          version: 0.1
+          phases:
+            install:
+              commands:
+                - aws cloudformation package --template-file CF.yaml --s3-bucket lambdapipeline-demo2  --output-template-file outputsamtemplate.yml
+                - aws cloudformation deploy --template-file outputsamtemplate.yml --stack-name L1 --capabilities CAPABILITY_IAM
+          artifacts:
+            type: zip
+            files:
+              - CF.yaml
+              - outputsamtemplate.yml
+      Environment:
+        ComputeType: "BUILD_GENERAL1_SMALL"
+        Image: "aws/codebuild/standard:4.0"
+        Type: "LINUX_CONTAINER"
+        EnvironmentVariables:
+          - Name: AWS_DEFAULT_REGION
+            Value: !Ref AWS::Region
+          - Name: S3_CLIENT_BUCKET
+            Value: !Ref LambdaDeployementS3Bucket
+      Name: !Sub ${AWS::StackName}-deploy-client
+      ServiceRole: !Ref CodeBuildServiceRole
+
   CodePipelineServiceRole:
     Type: AWS::IAM::Role
     Properties:
@@ -275,16 +345,16 @@ Resources:
           Actions:
             - Name: LambdaDeployStep
               ActionTypeId:
-                Category: Deploy
+                Category: Build
                 Owner: AWS
                 Version: 1
-                Provider: S3
+                Provider: CodeBuild
               Configuration:
-                BucketName: !Ref LambdaDeployementS3Bucket
-                Extract: true
-                ObjectKey: function
+                ProjectName: !Ref DeployClientBuildProject
               InputArtifacts:
                 - Name: App
+              OutputArtifacts:
+                - Name: ClientDeploymentOutput
               RunOrder: 1
 
   Lambda:
