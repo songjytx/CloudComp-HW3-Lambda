@@ -2,10 +2,10 @@ version: 0.1
 phases:
   install:
     commands:
-      - aws cloudformation package --template-file CF.yaml --s3-bucket lambdapipeline-demo2  --output-template-file outputsamtemplate.yml
+      - aws cloudformation package --template-file samTemplate.yaml --s3-bucket lambdapipeline-demo2  --output-template-file outputsamtemplate.yml
       - aws cloudformation deploy --template-file outputsamtemplate.yml --stack-name L1 --capabilities CAPABILITY_IAM
 artifacts:
   type: zip
   files:
-    - CF.yaml
+    - samTemplate.yaml
     - outputsamtemplate.yml

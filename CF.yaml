@@ -157,6 +157,8 @@ Resources:
       Bucket: !Ref FrontS3Bucket
 
   CodeBuildServiceRole:
+    DependsOn:
+      - LambdaDeployementS3Bucket
     Type: AWS::IAM::Role
     Properties:
       Path: /
@@ -182,7 +184,7 @@ Resources:
               - Resource: "*"
                 Effect: Allow
                 Action:
-                  - cloudformation
+                  - cloudformation:*
               - Resource:
                   - !Sub arn:aws:s3:::${LambdaDeployementS3Bucket}/*
                   - !Sub arn:aws:s3:::${LambdaDeployementS3Bucket}
@@ -211,12 +213,12 @@ Resources:
           phases:
             install:
               commands:
-                - aws cloudformation package --template-file CF.yaml --s3-bucket lambdapipeline-demo2  --output-template-file outputsamtemplate.yml
+                - aws cloudformation package --template-file samTemplate.yaml --s3-bucket lambdapipeline-demo2  --output-template-file outputsamtemplate.yml
                 - aws cloudformation deploy --template-file outputsamtemplate.yml --stack-name L1 --capabilities CAPABILITY_IAM
           artifacts:
             type: zip
             files:
-              - CF.yaml
+              - samTemplate.yaml
               - outputsamtemplate.yml
       Environment:
         ComputeType: "BUILD_GENERAL1_SMALL"
@@ -361,6 +363,7 @@ Resources:
     DependsOn: 
       - LambdaPipeline
       - LambdaDeployementS3Bucket
+      - DeployClientBuildProject
     Properties:
       Environment:
         Variables:
@@ -382,6 +385,7 @@ Resources:
     DependsOn: 
       - LambdaPipeline
       - LambdaDeployementS3Bucket
+      - DeployClientBuildProject
     Properties:
       Environment:
         Variables:
