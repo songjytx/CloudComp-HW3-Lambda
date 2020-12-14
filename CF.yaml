@@ -19,6 +19,112 @@ Parameters:
 
 
 Resources:
+  # Create a REST API
+  API:
+    DependsOn: 
+      - Lambda2
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: TestApi
+      EndpointConfiguration:
+        Types:
+          - REGIONAL
+  
+  # Create a resource
+  Search:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref API
+      # For resources without a parent, 
+      # specify the RestApi root resource ID
+      ParentId: !GetAtt
+        - API
+        - RootResourceId
+      # create endpoint/search
+      PathPart: search
+
+  # Create a GET method for search.
+  MethodSearch:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref API
+      ResourceId: !Ref Search
+      HttpMethod: POST
+      AuthorizationType: NONE
+      MethodResponses:
+        - StatusCode: 200
+      # You would need to modifiy below
+      Integration:
+        Type: AWS_PROXY
+        IntegrationResponses:
+          - StatusCode: '200'
+            ResponseTemplates:
+              application/json: ''
+
+        IntegrationHttpMethod: POST
+
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/arn:aws:lambda:us-east-1:186209955484:function:testLF2/invocations
+      
+  # Create a resource
+  Upload:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref API
+      # For resources without a parent, 
+      # specify the RestApi root resource ID
+      ParentId: !GetAtt
+        - API
+        - RootResourceId
+      # Create endpoint/upload
+      PathPart: '{folder}'
+  
+  # Create a child resource
+  File:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref API
+      ParentId: !Ref Upload 
+      
+      # Create endpoint/upload/{file-name}   // {} means a variable
+      PathPart: '{item}'
+
+
+  # Create a PUT method for upload.
+  MethodUploadBucketFile:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref API
+      ResourceId: !Ref File
+      HttpMethod: PUT
+      AuthorizationType: NONE
+      MethodResponses:
+        - StatusCode: 200
+      # You would need to modifiy below
+      Integration:
+        Type: AWS
+        IntegrationResponses:
+          - StatusCode: '200'
+            ResponseTemplates:
+              application/json: ''
+
+        Credentials: arn:aws:iam::186209955484:role/S3_Admin_Access
+        IntegrationHttpMethod: PUT
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:s3:path/{bucket}/{key}
+
+
+
+  Deployment:
+    # Useful if there are any dependencies. We can enforce order of executions
+    DependsOn: 
+      - MethodSearch
+      - MethodUploadBucketFile
+    Type: AWS::ApiGateway::Deployment
+    Properties:
+      RestApiId: !Ref API
+      Description: COMS-6998 Cloud Formation APIGateway Example by Hyun
+      StageName: v1
+
+
   FrontS3Bucket:
     Type: AWS::S3::Bucket
     Properties:
@@ -199,7 +305,7 @@ Resources:
       Role: arn:aws:iam::186209955484:role/service-role/LFTEST-role-onewv07z
       Timeout: 30
       Runtime: python3.8
-      FunctionName: testLF
+      FunctionName: assign3GenLF1
 
   Lambda2:
     Type: AWS::Serverless::Function
@@ -220,7 +326,7 @@ Resources:
       Role: arn:aws:iam::186209955484:role/service-role/LFTEST-role-onewv07z
       Timeout: 30
       Runtime: python3.8
-      FunctionName: testLF2
+      FunctionName: assign3GenLF2
 
 
 
