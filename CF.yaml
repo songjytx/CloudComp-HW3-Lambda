@@ -94,7 +94,7 @@ Resources:
                   - s3:ListAllMyBuckets
                   - s3:ListObjects
 
-  DeployClientBuildProject:
+  LambdaBuildProject:
     Type: AWS::CodeBuild::Project
     Properties:
       Artifacts:
@@ -106,12 +106,14 @@ Resources:
           phases:
             install:
               commands:
-                - aws cloudformation package --template-file samTemplate.yaml --s3-bucket assign3lambda  --output-template-file outputsamtemplate.yml
+                - aws cloudformation package --template-file samTemplate.yaml --s3-bucket assign3lambda --output-template-file outputsamtemplate.yml
           artifacts:
             type: zip
             files:
               - samTemplate.yaml
               - outputsamtemplate.yml
+              - Assign3-LF1.zip
+              - Assign3-LF2.zip
       Environment:
         ComputeType: "BUILD_GENERAL1_SMALL"
         Image: "aws/codebuild/standard:4.0"
@@ -169,6 +171,7 @@ Resources:
                 Effect: Allow
                 Action:
                   - lambda:*
+
   LambdaPipeline:
     Type: AWS::CodePipeline::Pipeline
     Properties:
@@ -193,22 +196,37 @@ Resources:
               OutputArtifacts:
                 - Name: App
               RunOrder: 1
-        - Name: Deploy
+        - Name: Build
           Actions:
-            - Name: LambdaDeployStep
+            - Name: LambdaBuildStep
               ActionTypeId:
                 Category: Build
                 Owner: AWS
                 Version: 1
                 Provider: CodeBuild
               Configuration:
-                ProjectName: !Ref DeployClientBuildProject
+                ProjectName: !Ref LambdaBuildProject
               InputArtifacts:
                 - Name: App
               OutputArtifacts:
-                - Name: ClientDeploymentOutput
+                - Name: LambdaBuildOutput
               RunOrder: 1
-
+        - Name: Deploy
+          Actions:
+            - Name: LambdaDeployStep
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Version: 1
+                Provider: S3
+              Configuration:
+                BucketName: !Ref LambdaDeployementS3Bucket
+                Extract: true
+                ObjectKey: function
+              InputArtifacts:
+                - Name: LambdaBuildOutput
+              RunOrder: 1
+              
   FrontPipeline:
     Type: AWS::CodePipeline::Pipeline
     Properties:
@@ -248,59 +266,6 @@ Resources:
               InputArtifacts:
                 - Name: App
               RunOrder: 1
-
-  LambdaTest:
-    Type: AWS::IAM::Role
-    DependsOn: 
-      - LambdaPipeline
-      - LambdaDeployementS3Bucket
-      - DeployClientBuildProject
-    Properties:
-      Path: /
-      AssumeRolePolicyDocument: |
-        {
-            "Statement": [{
-                "Effect": "Allow",
-                "Principal": { "Service": [ "codepipeline.amazonaws.com" ]},
-                "Action": [ "sts:AssumeRole" ]
-            }]
-        }
-      Policies:
-        - PolicyName: code-pipeline-policy
-          PolicyDocument:
-            Version: 2012-10-17
-            Statement:
-              - Resource:
-                  - !Sub arn:aws:s3:::${FrontS3Bucket}/*
-                  - !Sub arn:aws:s3:::${FrontS3Bucket}
-                  - !Sub arn:aws:s3:::${LambdaDeployementS3Bucket}/*
-                  - !Sub arn:aws:s3:::${LambdaDeployementS3Bucket}
-                Effect: Allow
-                Action:
-                  - s3:PutObject
-                  - s3:PutObjectAcl
-                  - s3:GetObject
-                  - s3:GetObjectVersion
-                  - s3:GetBucketVersioning
-                  - s3:ListObjects
-              - Resource:
-                  - arn:aws:s3:::*
-                Effect: Allow
-                Action:
-                  - s3:ListAllMyBuckets
-              - Resource: "*"
-                Effect: Allow
-                Action:
-                  - codebuild:StartBuild
-                  - codebuild:BatchGetBuilds
-                  - iam:PassRole
-              - Resource: "*"
-                Effect: Allow
-                Action:
-                  - lambda:*
-
-  
-
 
 Outputs:
   WebsiteURL:
