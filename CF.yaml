@@ -17,7 +17,6 @@ Parameters:
   GitHubUser:
     Type: String
 
-
 Resources:
   # Create a REST API
   API:
