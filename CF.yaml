@@ -4,16 +4,12 @@ Description: Assign3 Demo
 Parameters:
   FrontGitHubRepo:
     Type: String
-
   LambdaGitHubRepo:
     Type: String
-
   GitHubBranch:
     Type: String
-
   GitHubToken:
     Type: String
-
   GitHubUser:
     Type: String
 
@@ -188,9 +184,8 @@ Resources:
                 Action:
                   - cloudformation
               - Resource:
-                  - !Sub arn:aws:s3:::${AssetsBucket}/*
-                  - !Sub arn:aws:s3:::${ClientBucket}/*
-                  - !Sub arn:aws:s3:::${ClientBucket}
+                  - !Sub arn:aws:s3:::${LambdaDeployementS3Bucket}/*
+                  - !Sub arn:aws:s3:::${LambdaDeployementS3Bucket}
                 Effect: Allow
                 Action:
                   - s3:PutObject
