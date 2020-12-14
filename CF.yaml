@@ -234,7 +234,7 @@ Resources:
           - Name: S3_CLIENT_BUCKET
             Value: !Ref LambdaDeployementS3Bucket
       Name: !Sub ${AWS::StackName}-deploy-client
-      ServiceRole: arn:aws:iam::186209955484:role/S3_Admin_Access
+      ServiceRole: !Ref CodeBuildServiceRole
 
   CodePipelineServiceRole:
     Type: AWS::IAM::Role
