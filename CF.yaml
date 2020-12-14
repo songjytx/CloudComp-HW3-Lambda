@@ -23,7 +23,7 @@ Resources:
         IndexDocument: index.html
         ErrorDocument: index.html
     DeletionPolicy: Delete
-        
+              
   LambdaDeployementS3Bucket:
     Type: AWS::S3::Bucket
     Properties:
