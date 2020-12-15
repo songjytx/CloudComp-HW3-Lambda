@@ -86,6 +86,10 @@ Resources:
                 Effect: Allow
                 Action:
                   - apigateway:*
+              - Resource: "*"
+                Effect: Allow
+                Action:
+                  - iam:PassRole
               - Resource:
                   - !Sub arn:aws:s3:::${LambdaDeployementS3Bucket}/*
                   - !Sub arn:aws:s3:::${LambdaDeployementS3Bucket}
