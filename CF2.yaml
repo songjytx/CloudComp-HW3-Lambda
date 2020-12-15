@@ -1,17 +1,6 @@
 AWSTemplateFormatVersion: 2010-09-09
 Transform: AWS::Serverless-2016-10-31
 Description: Assign3 Demo
-Parameters:
-  FrontGitHubRepo:
-    Type: String
-  LambdaGitHubRepo:
-    Type: String
-  GitHubBranch:
-    Type: String
-  GitHubToken:
-    Type: String
-  GitHubUser:
-    Type: String
 
 Resources:
   # Create a REST API

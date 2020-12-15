@@ -78,6 +78,14 @@ Resources:
                 Effect: Allow
                 Action:
                   - cloudformation:*
+              - Resource: "*"
+                Effect: Allow
+                Action:
+                  - lambda:*
+              - Resource: "*"
+                Effect: Allow
+                Action:
+                  - apigateway:*
               - Resource:
                   - !Sub arn:aws:s3:::${LambdaDeployementS3Bucket}/*
                   - !Sub arn:aws:s3:::${LambdaDeployementS3Bucket}
@@ -94,7 +102,7 @@ Resources:
                   - s3:ListAllMyBuckets
                   - s3:ListObjects
 
-  LambdaBuildProject:
+  LambdaBuildProject1:
     Type: AWS::CodeBuild::Project
     Properties:
       Artifacts:
@@ -102,28 +110,50 @@ Resources:
       Source:
         Type: "CODEPIPELINE"
         BuildSpec: |
-          version: 0.1
+          version: 0.2
+
           phases:
-            install:
+            build:
               commands:
-                - aws cloudformation package --template-file samTemplate.yaml --s3-bucket assign3lambda --output-template-file outputsamtemplate.yml
-          artifacts:
-            type: zip
-            files:
-              - samTemplate.yaml
-              - outputsamtemplate.yml
-              - Assign3-LF1.zip
-              - Assign3-LF2.zip
+                 - aws cloudformation delete-stack --stack-name L2
       Environment:
         ComputeType: "BUILD_GENERAL1_SMALL"
-        Image: "aws/codebuild/standard:4.0"
+        Image: "aws/codebuild/amazonlinux2-x86_64-standard:2.0"
         Type: "LINUX_CONTAINER"
-        EnvironmentVariables:
-          - Name: AWS_DEFAULT_REGION
-            Value: !Ref AWS::Region
-          - Name: S3_CLIENT_BUCKET
-            Value: !Ref LambdaDeployementS3Bucket
-      Name: !Sub ${AWS::StackName}-deploy-client
+        # EnvironmentVariables:
+        #   - Name: AWS_DEFAULT_REGION
+        #     Value: !Ref AWS::Region
+        #   - Name: S3_CLIENT_BUCKET
+        #     Value: !Ref LambdaDeployementS3Bucket
+      Name: !Sub ${AWS::StackName}-build-project1
+      ServiceRole: !Ref CodeBuildServiceRole
+
+  LambdaBuildProject2:
+    Type: AWS::CodeBuild::Project
+    DependsOn:
+      - LambdaDeployementS3Bucket
+    Properties:
+      Artifacts:
+        Type: "CODEPIPELINE"
+      Source:
+        Type: "CODEPIPELINE"
+        BuildSpec: |
+          version: 0.2
+
+          phases:
+            build:
+              commands:
+                  - aws cloudformation create-stack --template-url https://assign3lambda.s3.amazonaws.com/function/CF2.yaml --stack-name L2 --capabilities CAPABILITY_AUTO_EXPAND
+      Environment:
+        ComputeType: "BUILD_GENERAL1_SMALL"
+        Image: "aws/codebuild/amazonlinux2-x86_64-standard:2.0"
+        Type: "LINUX_CONTAINER"
+        # EnvironmentVariables:
+        #   - Name: AWS_DEFAULT_REGION
+        #     Value: !Ref AWS::Region
+        #   - Name: S3_CLIENT_BUCKET
+        #     Value: !Ref LambdaDeployementS3Bucket
+      Name: !Sub ${AWS::StackName}-build-project2
       ServiceRole: !Ref CodeBuildServiceRole
 
   CodePipelineServiceRole:
@@ -182,7 +212,7 @@ Resources:
       Stages:
         - Name: Source
           Actions:
-            - Name: App
+            - Name: Source
               ActionTypeId:
                 Category: Source
                 Owner: ThirdParty
@@ -194,26 +224,11 @@ Resources:
                 Branch: !Ref GitHubBranch
                 OAuthToken: !Ref GitHubToken
               OutputArtifacts:
-                - Name: App
-              RunOrder: 1
-        - Name: Build
-          Actions:
-            - Name: LambdaBuildStep
-              ActionTypeId:
-                Category: Build
-                Owner: AWS
-                Version: 1
-                Provider: CodeBuild
-              Configuration:
-                ProjectName: !Ref LambdaBuildProject
-              InputArtifacts:
-                - Name: App
-              OutputArtifacts:
-                - Name: LambdaBuildOutput
+                - Name: SourceArtifact
               RunOrder: 1
         - Name: Deploy
           Actions:
-            - Name: LambdaDeployStep
+            - Name: Deploy
               ActionTypeId:
                 Category: Deploy
                 Owner: AWS
@@ -224,9 +239,40 @@ Resources:
                 Extract: true
                 ObjectKey: function
               InputArtifacts:
-                - Name: LambdaBuildOutput
+                - Name: SourceArtifact
               RunOrder: 1
-              
+        - Name: Update
+          Actions:
+            - Name: Update
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Version: 1
+                Provider: CodeBuild
+              Configuration:
+                ProjectName: !Ref LambdaBuildProject1
+              InputArtifacts:
+                - Name: SourceArtifact
+              OutputArtifacts:
+                - Name: updateOutput
+              RunOrder: 1
+        - Name: Create
+          Actions:
+            - Name: Create
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Version: 1
+                Provider: CodeBuild
+              Configuration:
+                ProjectName: !Ref LambdaBuildProject2
+              InputArtifacts:
+                - Name: SourceArtifact
+              OutputArtifacts:
+                - Name: createOutput
+              RunOrder: 1
+
+
   FrontPipeline:
     Type: AWS::CodePipeline::Pipeline
     Properties:
